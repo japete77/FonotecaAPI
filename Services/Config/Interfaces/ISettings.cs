@@ -9,5 +9,9 @@
         string Password { get; }
         string SessionTableName { get; }
         int SessionTTLSeconds { get; }
+        string AWSAccessKey { get; }
+        string AWSSecretKey { get; }
+        string AWSBucket { get; }
+        int AWSLinkExpireInSecs { get; }
     }
 }

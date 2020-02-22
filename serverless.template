@@ -11,7 +11,7 @@ Resources:
       CodeUri: ""
       MemorySize: 256
       Timeout: 30
-      Role: 
+      Role: arn:aws:iam::727245912271:role/FonotecaLambda
       Policies:
       - AWSLambdaFullAccess
       Events:

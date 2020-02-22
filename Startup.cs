@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Autofac.Configuration;
 using Belsize.Modules;
+using Config.Implementations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -165,8 +166,10 @@ namespace NuevaLuz
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory, IHostApplicationLifetime applicationLifetime /*, IHostingEnvironment env */)
+        public void Configure(IApplicationBuilder app /* IHostApplicationLifetime applicationLifetime, IHostingEnvironment env */)
         {
+            var settings = new Settings(Startup.Configuration);
+
             Startup.Application = app;
 
             // Use an exception handler middleware before any other handlers
