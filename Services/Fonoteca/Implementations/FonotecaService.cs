@@ -5,6 +5,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Config.Interfaces;
+using Core.Exceptions;
 using NuevaLuz.Fonoteca.Models;
 using NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces;
 using System;
@@ -74,12 +75,12 @@ namespace NuevaLuz.Fonoteca.Services.Fonoteca.Implementations
                 DateTime ttl = new DateTime(1970, 1, 1).AddSeconds(ttlSeconds);
                 if (DateTime.Now > ttl)
                 {
-                    throw new Exception("La sesión ha caducado");
+                    throw new AuthenticationException(ExceptionCodes.IDENTITY_AUTHORIZATION_SECURITY_EXCEPTION, "La sesión ha caducado");
                 }
             }
             else
             {
-                throw new Exception("Acceso denegado");
+                throw new AuthenticationException(ExceptionCodes.IDENTITY_AUTHORIZATION_SECURITY_EXCEPTION, "Acceso denegado");
             }
         }
 
@@ -163,7 +164,7 @@ connection);
             }
             else
             {
-                throw new Exception("Sesión inválida");
+                throw new AuthenticationException(ExceptionCodes.IDENTITY_AUTHORIZATION_SECURITY_EXCEPTION, "Sesión inválida");
             }
         }
 
@@ -194,7 +195,7 @@ connection);
 
                 SqlCommand commandTitles = new SqlCommand($@"SELECT * FROM (
                             SELECT ROW_NUMBER() OVER(ORDER BY titulo) AS idx, 
-                                   LH_audioteca.numero 'id', LH_audioteca.titulo 
+                                   LH_audioteca.numero 'id', LH_audioteca.titulo, LH_audioteca.id_autor 
                                FROM LH_audioteca, LH_formatosdisponibles 
                                WHERE LH_audioteca.id = LH_formatosdisponibles.id_audioteca AND LH_formatosdisponibles.id_formato = 4 AND LH_formatosdisponibles.activo = 'True' AND LH_audioteca.activo = 'True'
                          ) AS tbl WHERE idx BETWEEN ${index} AND ${index + count - 1}",
@@ -207,7 +208,8 @@ connection);
                         result.Titles.Add(new TitleModel
                         {
                             Id = reader[1].ToString().Trim(),
-                            Title = reader[2].ToString().Trim()
+                            Title = reader[2].ToString().Trim(),
+                            AuthorId = reader[3].ToString().Trim()
                         });
                     }
                 }

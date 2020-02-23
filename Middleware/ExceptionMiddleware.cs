@@ -76,7 +76,7 @@ namespace NuevaLuz.Fonoteca.Middleware
             else if (ex is AuthenticationException)
             {
                 statusCode = StatusCodes.Status401Unauthorized;
-                userMessage = "Invalid user name or password";
+                userMessage = "Usuario o contraseña incorrectos";
             }
             else if (ex is KeyNotFoundException)
             {

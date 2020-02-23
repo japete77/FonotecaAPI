@@ -44,11 +44,11 @@ namespace Belsize.Controllers
 
         [Route("change-password")]
         [HttpPost]
-        public async Task ChangePassword(string session, string newPassword)
+        public async Task ChangePassword(ChangePasswordRequest request)
         {
-            await _fonotecaService.CheckSession(session);
+            await _fonotecaService.CheckSession(request.Session);
 
-            await _fonotecaService.ChangePassword(session, newPassword);
+            await _fonotecaService.ChangePassword(request.Session, request.NewPassword);
         }
 
         [Route("titles")]
@@ -61,7 +61,7 @@ namespace Belsize.Controllers
             return await _fonotecaService.GetBooksByTitle(index, count);
         }
 
-        [Route("titles/author")]
+        [Route("titles/author/{author}")]
         [HttpGet]
         public async Task<TitleResult> GetAuthors(string session, string author, int index, int count)
         {
@@ -83,7 +83,7 @@ namespace Belsize.Controllers
 
         [Route("title/{id}")]
         [HttpGet]
-        public async Task<AudioBookDetailResult> GetDeatils(string session, string id)
+        public async Task<AudioBookDetailResult> GetDetails(string session, string id)
         {
             // Check security
             await _fonotecaService.CheckSession(session);
