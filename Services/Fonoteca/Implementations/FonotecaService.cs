@@ -4,6 +4,8 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.SimpleNotificationService;
+using Amazon.SimpleNotificationService.Model;
 using Config.Interfaces;
 using Core.Exceptions;
 using NuevaLuz.Fonoteca.Models;
@@ -11,7 +13,10 @@ using NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace NuevaLuz.Fonoteca.Services.Fonoteca.Implementations
@@ -42,6 +47,35 @@ namespace NuevaLuz.Fonoteca.Services.Fonoteca.Implementations
                 if (reader[0].ToString().Trim() != password)
                 {
                     throw new Exception("Usuario o contraseña incorrectos");
+                }
+            }
+        }
+
+        public async Task CheckNotificationsAccess(string user, string password)
+        {
+            string hashPass = Convert.ToBase64String(
+                new MD5CryptoServiceProvider().ComputeHash(
+                    new UnicodeEncoding().GetBytes(password)
+                )
+            );
+
+            using SqlConnection connection = new SqlConnection(
+   _connectionString);
+            SqlCommand commandCount = new SqlCommand($@"SELECT COUNT(*) FROM SI_gestores WHERE usuario=${user} AND pass=${hashPass} AND mensajesApp=true",
+    connection);
+
+            connection.Open();
+
+            using SqlDataReader reader = await commandCount.ExecuteReaderAsync();
+            if (reader.Read())
+            {
+                if (Convert.ToInt32(reader[0]) == 0)
+                {
+                    throw new Exception("Usuario o contraseña incorrectos");
+                }
+                if (reader[0].ToString().Trim() != user)
+                {
+
                 }
             }
         }
@@ -184,13 +218,13 @@ connection);
                               connection);
 
                 connection.Open();
-                
+
                 using (SqlDataReader reader = await commandCount.ExecuteReaderAsync())
                 {
                     while (reader.Read())
                     {
                         result.Total = Convert.ToInt32(reader[0]);
-                   }
+                    }
                 }
 
                 SqlCommand commandTitles = new SqlCommand($@"SELECT * FROM (
@@ -332,10 +366,8 @@ connection);
 
         public async Task<AudioBookLinkResult> GetAudioBookLink(string session, string id)
         {
-            var credentials = new BasicAWSCredentials(_settings.AWSAccessKey, _settings.AWSSecretKey);
-
             IAmazonS3 clientS3 = new AmazonS3Client(
-                credentials, 
+                new BasicAWSCredentials(_settings.AWSAccessKey, _settings.AWSSecretKey),
                 RegionEndpoint.EUWest1
             );
 
@@ -346,10 +378,34 @@ connection);
                 Key = $"{id.PadLeft(4, '0')}.zip"
             });
 
+            // Update Database counter so we have to get user from dynamod db (from session)
+            var currentUser = await GetUserFromSession(session);
 
+            if (!string.IsNullOrEmpty(currentUser))
+            {
+                using SqlConnection connection = new SqlConnection(
+                   _connectionString);
+                SqlCommand commandInsert = new SqlCommand($@"INSERT INTO LH_historico (id_usuario, id_audioteca, id_formato, id_estado,
+                    f_mibiblioteca, f_pendiente, f_envio, f_devolucion, regalo, gestor_mibiblioteca, gestor_pendiente, gestor_envio,
+                    gestor_devolucion, web) VALUES (${currentUser}, ${id}, 4, 5, GETDATE(), GETDATE(), GETDATE(), GETDATE(), 'True', 'MOVIL', 'MOVIL', 'MOVIL', 'MOVIL', 'True')",
+connection);
+
+                connection.Open();
+
+                await commandInsert.ExecuteNonQueryAsync();
+            }
+
+            return new AudioBookLinkResult
+            {
+                AudioBookLink = link
+            };
+        }
+
+        private async Task<string> GetUserFromSession(string session)
+        {
             // Update Database counter so we have to get user from dynamod db (from session)
             AmazonDynamoDBClient clientDynamoDB = new AmazonDynamoDBClient(
-                credentials,
+                new BasicAWSCredentials(_settings.AWSAccessKey, _settings.AWSSecretKey),
                 RegionEndpoint.EUWest1
             );
 
@@ -368,24 +424,10 @@ connection);
 
             if (sessionInfo != null)
             {
-                var currentUser = sessionInfo["user"].N;
-
-                using SqlConnection connection = new SqlConnection(
-                   _connectionString);
-                SqlCommand commandInsert = new SqlCommand($@"INSERT INTO LH_historico (id_usuario, id_audioteca, id_formato, id_estado,
-                    f_mibiblioteca, f_pendiente, f_envio, f_devolucion, regalo, gestor_mibiblioteca, gestor_pendiente, gestor_envio,
-                    gestor_devolucion, web) VALUES (${currentUser}, ${id}, 4, 5, GETDATE(), GETDATE(), GETDATE(), GETDATE(), 'True', 'MOVIL', 'MOVIL', 'MOVIL', 'MOVIL', 'True')",
-connection);
-
-                connection.Open();
-
-                await commandInsert.ExecuteNonQueryAsync();
+                return sessionInfo["user"].N;
             }
 
-            return new AudioBookLinkResult
-            {
-                AudioBookLink = link
-            };
+            return "";
         }
 
         public async Task<AudioBookDetailResult> GetBookDetail(string id)
@@ -425,5 +467,158 @@ connection);
             return result;
         }
 
+        public async Task<UserSubscriptions> GetUserSubscriptions(string session)
+        {
+            var userId = await GetUserFromSession(session);
+
+            var result = new UserSubscriptions()
+            {
+                Subscriptions = new List<Models.Subscription>()
+            };
+
+            using (SqlConnection connection = new SqlConnection(
+               _connectionString))
+            {
+                SqlCommand commandDeatils = new SqlCommand($@"SELECT 
+    SUS_titulosaudio.id AS id_suscription,
+    SUS_titulosaudio.des_corta AS suscription_code,
+    SUS_titulosaudio.descripcion AS suscription_description
+FROM  SUS_audio, SUS_titulosaudio
+WHERE SUS_audio.id_usuario={userId} AND
+SUS_titulosaudio.id = SUS_audio.id_titulo AND
+SUS_audio.id_formato = 5",
+                         connection);
+
+                connection.Open();
+
+                using SqlDataReader reader = await commandDeatils.ExecuteReaderAsync();
+                while (reader.Read())
+                {
+                    result.Subscriptions.Add(new Models.Subscription
+                    {
+                        Id = Convert.ToInt32(reader[0]),
+                        Code = reader[1].ToString().Trim(),
+                        Description = reader[2].ToString().Trim()
+                    });
+                }
+            }
+
+            return result;
+        }
+
+        public async Task<SubscriptionTitleResult> GetSuscriptionTitles(string session, string code)
+        {
+            var userId = await GetUserFromSession(session);
+
+            var result = new SubscriptionTitleResult()
+            {
+                Titles = new List<SubscriptionTitle>()
+            };
+
+            using (SqlConnection connection = new SqlConnection(
+               _connectionString))
+            {
+                SqlCommand commandDeatils = new SqlCommand($@"
+SELECT Mm.id, Mm.descripcion, Mm.f_alta, Mm.notas
+FROM  MT_materiales Mm
+INNER JOIN SUS_audio Sa on Mm.id_suscripcion = Sa.id_titulo
+INNER JOIN SUS_titulosaudio St on Mm.id_suscripcion = St.id
+WHERE St.des_corta = '{code}' AND Sa.id_usuario={userId} AND Mm.visible=1 AND Mm.web=0
+ORDER BY id DESC",
+                         connection);
+
+                connection.Open();
+
+                using SqlDataReader reader = await commandDeatils.ExecuteReaderAsync();
+                while (reader.Read())
+                {
+                    result.Titles.Add(new SubscriptionTitle
+                    {
+                        Id = Convert.ToInt32(reader[0]),
+                        Title = reader[1].ToString().Trim(),
+                        PublishingDate = Convert.ToDateTime(reader[2]),
+                        Description = reader[3].ToString().Trim()
+                    });
+                }
+            }
+
+            result.Total = result.Titles.Count;
+
+            return result;
+        }
+
+        public SuscriptionTitleLinkResult GetSuscriptionTitleLink(string session, string id)
+        {
+            IAmazonS3 clientS3 = new AmazonS3Client(
+                new BasicAWSCredentials(_settings.AWSAccessKey, _settings.AWSSecretKey),
+                RegionEndpoint.EUWest1
+            );
+
+            var link = clientS3.GetPreSignedURL(new GetPreSignedUrlRequest
+            {
+                BucketName = _settings.AWSBucket,
+                Expires = DateTime.Now.AddSeconds(_settings.AWSLinkExpireInSecs),
+                Key = $"{id}.zip"
+            });
+
+            //            // Update Database counter so we have to get user from dynamod db (from session)
+            //            var currentUser = await GetUserFromSession(session);
+
+            //            if (!string.IsNullOrEmpty(currentUser))
+            //            {
+            //                using SqlConnection connection = new SqlConnection(
+            //                   _connectionString);
+            //                SqlCommand commandInsert = new SqlCommand($@"INSERT INTO LH_historico (id_usuario, id_audioteca, id_formato, id_estado,
+            //                    f_mibiblioteca, f_pendiente, f_envio, f_devolucion, regalo, gestor_mibiblioteca, gestor_pendiente, gestor_envio,
+            //                    gestor_devolucion, web) VALUES (${currentUser}, ${id}, 4, 5, GETDATE(), GETDATE(), GETDATE(), GETDATE(), 'True', 'MOVIL', 'MOVIL', 'MOVIL', 'MOVIL', 'True')",
+            //connection);
+
+            //                connection.Open();
+
+            //                await commandInsert.ExecuteNonQueryAsync();
+            //            }
+
+            return new SuscriptionTitleLinkResult
+            {
+                SubscriptionTitleLink = link
+            };
+        }
+
+        public async Task SendMessage(string title, string message, string type, int? id)
+        {
+            var credentials = new BasicAWSCredentials(_settings.AWSAccessKey, _settings.AWSSecretKey);
+
+            AmazonSimpleNotificationServiceClient snsClient = new AmazonSimpleNotificationServiceClient(
+                credentials,
+                RegionEndpoint.EUWest1
+            );
+
+            var date = DateTime.Now.ToString("d MMMM yyyy", CultureInfo.CreateSpecificCulture("es-ES"));
+
+            string elementId = id.HasValue ? id.ToString() : "0";
+
+            string jsonMessage = $@"{{
+    ""default"": ""{message}"",
+    ""APNS_SANDBOX"": ""{{ \""aps\"": {{ \""date\"": \""{date}\"", \""title\"": \""{title}\"", \""alert\"": \""{message}\"", \""type\"": \""{type}\"", \""id\"": \""{elementId}\"", \""sound\"": \""default\"" }} }}"",
+    ""APNS"": ""{{ \""aps\"": {{ \""date\"": \""{date}\"", \""title\"": \""{title}\"", \""alert\"": \""{message}\"", \""type\"": \""{type}\"", \""id\"": \""{elementId}\"", \""sound\"": \""default\"" }} }}""
+}}";
+            var topicArn = _settings.TopicArn;
+            if (!string.IsNullOrEmpty(type))
+            {
+                topicArn += $"-{type}";
+            }
+
+            var response = await snsClient.PublishAsync(new PublishRequest
+            {
+                MessageStructure = "json",
+                Message = jsonMessage,
+                TopicArn = topicArn
+            });
+
+            if (response.HttpStatusCode != System.Net.HttpStatusCode.OK)
+            {
+                throw new InternalException(ExceptionCodes.PUBLISH_MESSAGE_ERROR, $"Error publishing notification message: {response.HttpStatusCode}, {response.MessageId}");
+            }
+        }
     }
 }

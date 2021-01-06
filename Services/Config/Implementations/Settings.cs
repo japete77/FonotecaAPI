@@ -25,6 +25,6 @@ namespace Config.Implementations
         public string AWSSecretKey { get { return Get("AWS:SecretKey"); } }
         public string AWSBucket { get { return Get("AWS:Bucket"); } }
         public int AWSLinkExpireInSecs { get { return Int32.Parse(Get("AWS:LinkExpireInSecs")); } }
-
+        public string TopicArn { get { return Get("AWS:TopicArn"); } }
     }
 }

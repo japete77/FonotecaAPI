@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NuevaLuz.Fonoteca.Models;
 using NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces;
 using System;
@@ -99,6 +98,45 @@ namespace Belsize.Controllers
             await _fonotecaService.CheckSession(session);
 
             return await _fonotecaService.GetAudioBookLink(session, id);
+        }
+
+        [Route("publish-message")]
+        [HttpPost]
+        public async Task PublishMessage(PublishMessageRequest request)
+        {
+            await _fonotecaService.CheckNotificationsAccess(request.User, request.Password);
+
+            await _fonotecaService.SendMessage(request.Title, request.Message, request.Type, request.Id);
+        }
+
+        [Route("subscriptions")]
+        [HttpGet]
+        public async Task<UserSubscriptions> GetUserSubscription(string session)
+        {
+            // Check security
+            await _fonotecaService.CheckSession(session);
+
+            return await _fonotecaService.GetUserSubscriptions(session);
+        }
+
+        [Route("subscriptions/titles")]
+        [HttpGet]
+        public async Task<SubscriptionTitleResult> GetSuscriptionTitles(string session, string code)
+        {
+            // Check security
+            await _fonotecaService.CheckSession(session);
+
+            return await _fonotecaService.GetSuscriptionTitles(session, code);
+        }
+
+        [Route("subscription/title/{id}/link")]
+        [HttpGet]
+        public async Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id)
+        {
+            // Check security
+            await _fonotecaService.CheckSession(session);
+
+            return _fonotecaService.GetSuscriptionTitleLink(session, id);
         }
     }
 }

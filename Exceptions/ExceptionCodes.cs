@@ -57,5 +57,8 @@
         // Workflows
         public static int WORKFLOW_NOT_FOUND = -9000;
         public static int WORKFLOW_STATUS_UPDATE_ERROR = -9001;
+
+        // Aws Simple Notification Service
+        public static int PUBLISH_MESSAGE_ERROR = -10000;
     }
 }

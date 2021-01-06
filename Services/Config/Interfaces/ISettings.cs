@@ -13,5 +13,6 @@
         string AWSSecretKey { get; }
         string AWSBucket { get; }
         int AWSLinkExpireInSecs { get; }
+        string TopicArn { get; }
     }
 }
