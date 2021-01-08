@@ -106,17 +106,17 @@ namespace Belsize.Controllers
         {
             await _fonotecaService.CheckNotificationsAccess(request.User, request.Password);
 
-            await _fonotecaService.SendMessage(request.Title, request.Message, request.Type, request.Id);
+            await _fonotecaService.SendMessage(request.Notification, request.Title, request.Message, request.SubscriptionId, request.MaterialId);
         }
 
         [Route("subscriptions")]
         [HttpGet]
-        public async Task<UserSubscriptions> GetUserSubscription(string session)
+        public async Task<UserSubscriptions> GetUserSubscription(string session, bool onlyAppSubscriptions = true)
         {
             // Check security
             await _fonotecaService.CheckSession(session);
 
-            return await _fonotecaService.GetUserSubscriptions(session);
+            return await _fonotecaService.GetUserSubscriptions(session, onlyAppSubscriptions);
         }
 
         [Route("subscriptions/titles")]
@@ -136,7 +136,17 @@ namespace Belsize.Controllers
             // Check security
             await _fonotecaService.CheckSession(session);
 
-            return _fonotecaService.GetSuscriptionTitleLink(session, id);
+            return await _fonotecaService.GetSuscriptionTitleLink(session, id);
+        }
+
+        [Route("notifications")]
+        [HttpGet]
+        public async Task<NotificationsResult> GetUserNotifications(string session)
+        {
+            // Check security
+            await _fonotecaService.CheckSession(session);
+
+            return await _fonotecaService.GetUserNotifications(session);
         }
     }
 }

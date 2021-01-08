@@ -13,10 +13,11 @@ namespace NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces
         Task<AudioBookLinkResult> GetAudioBookLink(string session, string id);
         Task<AudioBookDetailResult> GetBookDetail(string id);
         Task CheckSession(string session);
-        Task SendMessage(string title, string message, string type, int? id);
+        Task SendMessage(string notification, string title, string message, int id_suscription, int? id_material);
         Task CheckNotificationsAccess(string user, string password);
-        Task<UserSubscriptions> GetUserSubscriptions(string session);
+        Task<UserSubscriptions> GetUserSubscriptions(string session, bool onlyAppSubscriptions);
         Task<SubscriptionTitleResult> GetSuscriptionTitles(string session, string code);
-        SuscriptionTitleLinkResult GetSuscriptionTitleLink(string session, string id);
+        Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id);
+        Task<NotificationsResult> GetUserNotifications(string session);
     }
 }

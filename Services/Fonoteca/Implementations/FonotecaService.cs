@@ -17,6 +17,7 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace NuevaLuz.Fonoteca.Services.Fonoteca.Implementations
@@ -61,7 +62,7 @@ namespace NuevaLuz.Fonoteca.Services.Fonoteca.Implementations
 
             using SqlConnection connection = new SqlConnection(
    _connectionString);
-            SqlCommand commandCount = new SqlCommand($@"SELECT COUNT(*) FROM SI_gestores WHERE usuario=${user} AND pass=${hashPass} AND mensajesApp=true",
+            SqlCommand commandCount = new SqlCommand($@"SELECT COUNT(*) FROM SI_gestores WHERE usuario='{user}' AND pass='{hashPass}' AND mensajesApp=1",
     connection);
 
             connection.Open();
@@ -467,7 +468,27 @@ connection);
             return result;
         }
 
-        public async Task<UserSubscriptions> GetUserSubscriptions(string session)
+        public async Task<string> GetSubscriptionCode(int id)
+        {
+            using (SqlConnection connection = new SqlConnection(
+               _connectionString))
+            {
+                SqlCommand commandDeatils = new SqlCommand($@"SELECT des_corta FROM SUS_titulosaudio WHERE id=${id}",
+                         connection);
+
+                connection.Open();
+
+                using SqlDataReader reader = await commandDeatils.ExecuteReaderAsync();
+                while (reader.Read())
+                {
+                    return reader[0].ToString().Trim();
+                }
+            }
+
+            return "";
+        }
+
+        public async Task<UserSubscriptions> GetUserSubscriptions(string session, bool onlyAppSubscriptions)
         {
             var userId = await GetUserFromSession(session);
 
@@ -476,18 +497,24 @@ connection);
                 Subscriptions = new List<Models.Subscription>()
             };
 
-            using (SqlConnection connection = new SqlConnection(
-               _connectionString))
-            {
-                SqlCommand commandDeatils = new SqlCommand($@"SELECT 
+            string sqlQuery = $@"SELECT 
     SUS_titulosaudio.id AS id_suscription,
     SUS_titulosaudio.des_corta AS suscription_code,
     SUS_titulosaudio.descripcion AS suscription_description
 FROM  SUS_audio, SUS_titulosaudio
 WHERE SUS_audio.id_usuario={userId} AND
-SUS_titulosaudio.id = SUS_audio.id_titulo AND
-SUS_audio.id_formato = 5",
-                         connection);
+SUS_titulosaudio.id = SUS_audio.id_titulo";
+
+            // Only subscriptions for app list
+            if (onlyAppSubscriptions)
+            {
+                sqlQuery += " AND SUS_audio.id_formato = 5";
+            }
+
+            using (SqlConnection connection = new SqlConnection(
+               _connectionString))
+            {
+                SqlCommand commandDeatils = new SqlCommand(sqlQuery, connection);
 
                 connection.Open();
 
@@ -524,7 +551,7 @@ FROM  MT_materiales Mm
 INNER JOIN SUS_audio Sa on Mm.id_suscripcion = Sa.id_titulo
 INNER JOIN SUS_titulosaudio St on Mm.id_suscripcion = St.id
 WHERE St.des_corta = '{code}' AND Sa.id_usuario={userId} AND Mm.visible=1 AND Mm.web=0
-ORDER BY id DESC",
+ORDER BY Mm.f_alta DESC, id DESC",
                          connection);
 
                 connection.Open();
@@ -547,7 +574,7 @@ ORDER BY id DESC",
             return result;
         }
 
-        public SuscriptionTitleLinkResult GetSuscriptionTitleLink(string session, string id)
+        public async Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id)
         {
             IAmazonS3 clientS3 = new AmazonS3Client(
                 new BasicAWSCredentials(_settings.AWSAccessKey, _settings.AWSSecretKey),
@@ -561,22 +588,24 @@ ORDER BY id DESC",
                 Key = $"{id}.zip"
             });
 
-            //            // Update Database counter so we have to get user from dynamod db (from session)
-            //            var currentUser = await GetUserFromSession(session);
+            // Update Database counter so we have to get user from dynamod db (from session)
+            var currentUser = await GetUserFromSession(session);
 
-            //            if (!string.IsNullOrEmpty(currentUser))
-            //            {
-            //                using SqlConnection connection = new SqlConnection(
-            //                   _connectionString);
-            //                SqlCommand commandInsert = new SqlCommand($@"INSERT INTO LH_historico (id_usuario, id_audioteca, id_formato, id_estado,
-            //                    f_mibiblioteca, f_pendiente, f_envio, f_devolucion, regalo, gestor_mibiblioteca, gestor_pendiente, gestor_envio,
-            //                    gestor_devolucion, web) VALUES (${currentUser}, ${id}, 4, 5, GETDATE(), GETDATE(), GETDATE(), GETDATE(), 'True', 'MOVIL', 'MOVIL', 'MOVIL', 'MOVIL', 'True')",
-            //connection);
+            var number = Regex.Split(id, @"\D+");
+            if (number != null && number.Length > 0)
+            {
+                if (!string.IsNullOrEmpty(currentUser))
+                {
+                    using SqlConnection connection = new SqlConnection(
+                       _connectionString);
+                    SqlCommand commandInsert = new SqlCommand($@"INSERT INTO SUS_historico (fecha, id_usuario, id_material) VALUES (GETDATE(), {currentUser}, {number[number.Length - 1]})",
+    connection);
 
-            //                connection.Open();
+                    connection.Open();
 
-            //                await commandInsert.ExecuteNonQueryAsync();
-            //            }
+                    await commandInsert.ExecuteNonQueryAsync();
+                }
+            }
 
             return new SuscriptionTitleLinkResult
             {
@@ -584,8 +613,22 @@ ORDER BY id DESC",
             };
         }
 
-        public async Task SendMessage(string title, string message, string type, int? id)
+        public async Task SendMessage(string notification, string title, string message, int id_suscripcion, int? id)
         {
+            string id_material = id.HasValue ? id.ToString() : "0";
+
+            // Save notification into the database
+            using SqlConnection connection = new SqlConnection(
+                _connectionString);
+            SqlCommand commandInsert = new SqlCommand($@"INSERT INTO SUS_notificaciones (fecha, titulo, mensaje, id_suscripcion, id_material) 
+                VALUES (GETDATE(), '{title}', '{message}', {id_suscripcion}, {id_material})",
+connection);
+
+            connection.Open();
+
+            await commandInsert.ExecuteNonQueryAsync();
+
+            // Send SNS notification to Android and iOS registered devices
             var credentials = new BasicAWSCredentials(_settings.AWSAccessKey, _settings.AWSSecretKey);
 
             AmazonSimpleNotificationServiceClient snsClient = new AmazonSimpleNotificationServiceClient(
@@ -593,32 +636,75 @@ ORDER BY id DESC",
                 RegionEndpoint.EUWest1
             );
 
-            var date = DateTime.Now.ToString("d MMMM yyyy", CultureInfo.CreateSpecificCulture("es-ES"));
-
-            string elementId = id.HasValue ? id.ToString() : "0";
-
-            string jsonMessage = $@"{{
-    ""default"": ""{message}"",
-    ""APNS_SANDBOX"": ""{{ \""aps\"": {{ \""date\"": \""{date}\"", \""title\"": \""{title}\"", \""alert\"": \""{message}\"", \""type\"": \""{type}\"", \""id\"": \""{elementId}\"", \""sound\"": \""default\"" }} }}"",
-    ""APNS"": ""{{ \""aps\"": {{ \""date\"": \""{date}\"", \""title\"": \""{title}\"", \""alert\"": \""{message}\"", \""type\"": \""{type}\"", \""id\"": \""{elementId}\"", \""sound\"": \""default\"" }} }}""
-}}";
-            var topicArn = _settings.TopicArn;
-            if (!string.IsNullOrEmpty(type))
+            // Get notification type based on id
+            var code = "";
+            if (id_suscripcion > 0)
             {
-                topicArn += $"-{type}";
+                code = await GetSubscriptionCode(id_suscripcion);
             }
 
-            var response = await snsClient.PublishAsync(new PublishRequest
+            var topicArn = $"{_settings.TopicArn}";
+            if (!string.IsNullOrEmpty(code))
+            {
+                topicArn += $"-{code}";
+            }
+
+            var responseNotification = await snsClient.PublishAsync(new PublishRequest
             {
                 MessageStructure = "json",
-                Message = jsonMessage,
-                TopicArn = topicArn
+                TopicArn = topicArn,
+                Message = $@"{{
+    ""default"": ""{notification}"",
+    ""APNS_SANDBOX"": ""{{ \""aps\"": {{ \""alert\"": \""{notification}\"", \""sound\"": \""default\"" }} }}"",
+    ""APNS"": ""{{ \""aps\"": {{  \""alert\"": \""{notification}\"", \""sound\"": \""default\"" }} }}"",
+    ""GCM"": ""{{ \""data\"": {{ \""notification\"": \""{notification}\"" }}, \""notification\"": {{ \""title\"": \""Tienes una notificación nueva\"", \""body\"": \""{notification}\"" }} }}""
+}}",
             });
 
-            if (response.HttpStatusCode != System.Net.HttpStatusCode.OK)
+            if (responseNotification.HttpStatusCode != System.Net.HttpStatusCode.OK)
             {
-                throw new InternalException(ExceptionCodes.PUBLISH_MESSAGE_ERROR, $"Error publishing notification message: {response.HttpStatusCode}, {response.MessageId}");
+                throw new InternalException(ExceptionCodes.PUBLISH_MESSAGE_ERROR, $"Error publishing extra notification message to Android: {responseNotification.HttpStatusCode}, {responseNotification.MessageId}");
             }
+        }
+
+        public async Task<NotificationsResult> GetUserNotifications(string session)
+        {
+            var userId = await GetUserFromSession(session);
+
+            var result = new NotificationsResult()
+            {
+                Notifications = new List<NotificationModel>()
+            };
+
+            using (SqlConnection connection = new SqlConnection(
+               _connectionString))
+            {
+                SqlCommand commandDeatils = new SqlCommand($@"
+SELECT TOP 50 Sn.fecha, Sn.titulo, Sn.mensaje, Sn.id_material, St.des_corta
+FROM SUS_notificaciones Sn
+LEFT JOIN SUS_titulosaudio St ON (St.id = Sn.id_suscripcion)
+INNER JOIN SUS_audio Sa ON (Sa.id_titulo = St.id)
+WHERE Sa.id_usuario = {userId}
+ORDER BY Sn.fecha DESC",
+                         connection);
+
+                connection.Open();
+
+                using SqlDataReader reader = await commandDeatils.ExecuteReaderAsync();
+                while (reader.Read())
+                {
+                    result.Notifications.Add(new NotificationModel
+                    {
+                        Date = Convert.ToDateTime(reader[0]).ToString("d MMMM yyyy", CultureInfo.CreateSpecificCulture("es-ES")),
+                        Title = reader[1].ToString().Trim(),
+                        Body = reader[2].ToString().Trim(),
+                        ContentId = reader[3].ToString().Trim(),
+                        Code = reader[4].ToString().Trim()
+                    });
+                }
+            }
+
+            return result;
         }
     }
 }
