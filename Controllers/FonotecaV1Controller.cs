@@ -2,6 +2,7 @@
 using NuevaLuz.Fonoteca.Models;
 using NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Belsize.Controllers
@@ -131,12 +132,12 @@ namespace Belsize.Controllers
 
         [Route("subscription/title/{id}/link")]
         [HttpGet]
-        public async Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id)
+        public async Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id, int app = 1)
         {
             // Check security
             await _fonotecaService.CheckSession(session);
 
-            return await _fonotecaService.GetSuscriptionTitleLink(session, id);
+            return await _fonotecaService.GetSuscriptionTitleLink(session, id, app);
         }
 
         [Route("notifications")]
@@ -147,6 +148,16 @@ namespace Belsize.Controllers
             await _fonotecaService.CheckSession(session);
 
             return await _fonotecaService.GetUserNotifications(session);
+        }
+
+        [Route("notifications/ids")]
+        [HttpGet]
+        public async Task<List<int>> GetUserNotificationsIds(string session)
+        {
+            // Check security
+            await _fonotecaService.CheckSession(session);
+
+            return await _fonotecaService.GetUserNotificationsIds(session);
         }
     }
 }

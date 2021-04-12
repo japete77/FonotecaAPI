@@ -550,7 +550,7 @@ SELECT Mm.id, Mm.descripcion, Mm.f_alta, Mm.notas
 FROM  MT_materiales Mm
 INNER JOIN SUS_audio Sa on Mm.id_suscripcion = Sa.id_titulo
 INNER JOIN SUS_titulosaudio St on Mm.id_suscripcion = St.id
-WHERE St.des_corta = '{code}' AND Sa.id_usuario={userId} AND Mm.visible=1 AND Mm.web=0
+WHERE St.des_corta = '{code}' AND Sa.id_usuario={userId} AND Mm.visible=1 AND Mm.web=1
 ORDER BY Mm.f_alta DESC, id DESC",
                          connection);
 
@@ -574,7 +574,7 @@ ORDER BY Mm.f_alta DESC, id DESC",
             return result;
         }
 
-        public async Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id)
+        public async Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id, int app = 1)
         {
             IAmazonS3 clientS3 = new AmazonS3Client(
                 new BasicAWSCredentials(_settings.AWSAccessKey, _settings.AWSSecretKey),
@@ -598,7 +598,7 @@ ORDER BY Mm.f_alta DESC, id DESC",
                 {
                     using SqlConnection connection = new SqlConnection(
                        _connectionString);
-                    SqlCommand commandInsert = new SqlCommand($@"INSERT INTO SUS_historico (fecha, id_usuario, id_material) VALUES (GETDATE(), {currentUser}, {number[number.Length - 1]})",
+                    SqlCommand commandInsert = new SqlCommand($@"INSERT INTO SUS_historico (fecha, id_usuario, id_material, descargaApp) VALUES (GETDATE(), {currentUser}, {number[number.Length - 1]}, {app})",
     connection);
 
                     connection.Open();
@@ -680,7 +680,7 @@ connection);
                _connectionString))
             {
                 SqlCommand commandDeatils = new SqlCommand($@"
-SELECT TOP 50 Sn.fecha, Sn.titulo, Sn.mensaje, Sn.id_material, St.des_corta
+SELECT TOP 50 Sn.id, Sn.fecha, Sn.titulo, Sn.mensaje, Sn.id_material, St.des_corta
 FROM SUS_notificaciones Sn
 LEFT JOIN SUS_titulosaudio St ON (St.id = Sn.id_suscripcion)
 INNER JOIN SUS_audio Sa ON (Sa.id_titulo = St.id)
@@ -695,12 +695,43 @@ ORDER BY Sn.fecha DESC",
                 {
                     result.Notifications.Add(new NotificationModel
                     {
-                        Date = Convert.ToDateTime(reader[0]).ToString("d MMMM yyyy", CultureInfo.CreateSpecificCulture("es-ES")),
-                        Title = reader[1].ToString().Trim(),
-                        Body = reader[2].ToString().Trim(),
-                        ContentId = reader[3].ToString().Trim(),
-                        Code = reader[4].ToString().Trim()
+                        Id = Convert.ToInt32(reader[0]),
+                        Date = Convert.ToDateTime(reader[1]).ToString("d MMMM yyyy", CultureInfo.CreateSpecificCulture("es-ES")),
+                        Title = reader[2].ToString().Trim(),
+                        Body = reader[3].ToString().Trim(),
+                        ContentId = reader[4].ToString().Trim(),
+                        Code = reader[5].ToString().Trim()
                     });
+                }
+            }
+
+            return result;
+        }
+
+        public async Task<List<int>> GetUserNotificationsIds(string session)
+        {
+            var userId = await GetUserFromSession(session);
+
+            var result = new List<int>();
+
+            using (SqlConnection connection = new SqlConnection(
+               _connectionString))
+            {
+                SqlCommand commandDeatils = new SqlCommand($@"
+SELECT TOP 50 Sn.id
+FROM SUS_notificaciones Sn
+LEFT JOIN SUS_titulosaudio St ON (St.id = Sn.id_suscripcion)
+INNER JOIN SUS_audio Sa ON (Sa.id_titulo = St.id)
+WHERE Sa.id_usuario = {userId}
+ORDER BY Sn.id DESC",
+                         connection);
+
+                connection.Open();
+
+                using SqlDataReader reader = await commandDeatils.ExecuteReaderAsync();
+                while (reader.Read())
+                {
+                    result.Add(Convert.ToInt32(reader[0]));
                 }
             }
 

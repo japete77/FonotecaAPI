@@ -1,4 +1,5 @@
 ﻿using NuevaLuz.Fonoteca.Models;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces
@@ -17,7 +18,8 @@ namespace NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces
         Task CheckNotificationsAccess(string user, string password);
         Task<UserSubscriptions> GetUserSubscriptions(string session, bool onlyAppSubscriptions);
         Task<SubscriptionTitleResult> GetSuscriptionTitles(string session, string code);
-        Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id);
+        Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id, int app = 1);
         Task<NotificationsResult> GetUserNotifications(string session);
+        Task<List<int>> GetUserNotificationsIds(string session);
     }
 }
