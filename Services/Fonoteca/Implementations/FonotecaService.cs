@@ -37,7 +37,7 @@ namespace NuevaLuz.Fonoteca.Services.Fonoteca.Implementations
         {
             using SqlConnection connection = new SqlConnection(
    _connectionString);
-            SqlCommand commandCount = new SqlCommand($@"SELECT contrasena FROM US_usuarios WHERE id=${user}",
+            SqlCommand commandCount = new SqlCommand($@"SELECT contrasena FROM US_usuarios WHERE id=${user} AND activoweb=1",
     connection);
 
             connection.Open();
