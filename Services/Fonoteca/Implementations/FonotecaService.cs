@@ -37,18 +37,15 @@ namespace NuevaLuz.Fonoteca.Services.Fonoteca.Implementations
         {
             using SqlConnection connection = new SqlConnection(
    _connectionString);
-            SqlCommand commandCount = new SqlCommand($@"SELECT contrasena FROM US_usuarios WHERE id=${user} AND activoweb=1",
+            SqlCommand commandCount = new SqlCommand($@"SELECT contrasena FROM US_usuarios WHERE id=${user} AND activoweb=1 AND activo=1",
     connection);
 
             connection.Open();
 
             using SqlDataReader reader = await commandCount.ExecuteReaderAsync();
-            if (reader.Read())
+            if (!(reader.Read() && reader[0].ToString().Trim() == password))
             {
-                if (reader[0].ToString().Trim() != password)
-                {
-                    throw new Exception("Usuario o contraseña incorrectos");
-                }
+                throw new Exception("Usuario o contraseña incorrectos");
             }
         }
 
