@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NuevaLuz.Fonoteca.Models;
 using NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces;
+using NuevaLuz.Fonoteca.Services.Notifications.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -12,9 +13,10 @@ namespace Belsize.Controllers
     [Produces("application/json")]
     public class FonotecaV1Controller : ControllerBase
     {
+        INotificationsService _notificationsService { get; }
         IFonotecaService _fonotecaService { get; }
 
-        public FonotecaV1Controller(IFonotecaService fonotecaService)
+        public FonotecaV1Controller(IFonotecaService fonotecaService, INotificationsService notificationsService)
         {
             _fonotecaService = fonotecaService;
         }
@@ -30,16 +32,24 @@ namespace Belsize.Controllers
 
             try
             {
-                result.Session = await _fonotecaService.Login(request.User, request.Password);
+                result = await _fonotecaService.Login(request.User, request.Password);
                 result.Success = true;
             }
             catch (Exception ex)
             {
                 result.Success = false;
+                result.MustBeChanged = false;
                 result.Message = ex.Message;
             }
 
             return result;
+        }
+
+        [Route("forgot-password")]
+        [HttpPost]
+        public async Task ForgotPassword(ForgotPasswordRequest request)
+        {
+            await _fonotecaService.ForgotPassword(request.Email);
         }
 
         [Route("change-password")]
@@ -49,6 +59,16 @@ namespace Belsize.Controllers
             await _fonotecaService.CheckSession(request.Session);
 
             await _fonotecaService.ChangePassword(request.Session, request.NewPassword);
+        }
+
+        [Route("titles/latest")]
+        [HttpGet]
+        public async Task<TitleResult> GetLatestTitles(string session, int index, int count)
+        {
+            // Check security
+            await _fonotecaService.CheckSession(session);
+
+            return await _fonotecaService.GetRecentBooks(index, count);
         }
 
         [Route("titles")]
@@ -98,7 +118,17 @@ namespace Belsize.Controllers
             // Check security
             await _fonotecaService.CheckSession(session);
 
-            return await _fonotecaService.GetAudioBookLink(session, id);
+            return _fonotecaService.GetAudioBookLink(session, id);
+        }
+
+        [Route("title/{id}/link/count")]
+        [HttpPost]
+        public async Task IncreaseTitleDownloadCounter(string session, string id)
+        {
+            // Check security
+            await _fonotecaService.CheckSession(session);
+
+            await _fonotecaService.IncreaseTitleDownloadCounter(session, id);
         }
 
         [Route("publish-message")]
@@ -130,6 +160,17 @@ namespace Belsize.Controllers
             return await _fonotecaService.GetSuscriptionTitles(session, code);
         }
 
+        [Route("subscription/title/{id}/link/count")]
+        [HttpPost]
+        public async Task IncreaseSuscriptionTitleLink(string session, string id, int app = 1)
+        {
+            // Check security
+            await _fonotecaService.CheckSession(session);
+
+            await _fonotecaService.IncreaseSuscriptionTitleDownloadCounter(session, id, app);
+        }
+
+
         [Route("subscription/title/{id}/link")]
         [HttpGet]
         public async Task<SuscriptionTitleLinkResult> GetSuscriptionTitleLink(string session, string id, int app = 1)
@@ -137,7 +178,7 @@ namespace Belsize.Controllers
             // Check security
             await _fonotecaService.CheckSession(session);
 
-            return await _fonotecaService.GetSuscriptionTitleLink(session, id, app);
+            return _fonotecaService.GetSuscriptionTitleLink(session, id, app);
         }
 
         [Route("notifications")]
@@ -158,6 +199,23 @@ namespace Belsize.Controllers
             await _fonotecaService.CheckSession(session);
 
             return await _fonotecaService.GetUserNotificationsIds(session);
+        }
+
+        [Route("notifications/synch")]
+        [HttpPut]
+        public async Task<SynchNotificactionsResponse> SynchUserNotifications(SynchNotificationsRequest request)
+        {
+            // Check security
+            await _fonotecaService.CheckSession(request.Session);
+
+            // Synch notificacions
+            var result = await _notificationsService.SynchSubscriptions(request.Session, request.DeviceToken, request.Platform, request.Subscriptions);
+
+            // Response
+            return new SynchNotificactionsResponse
+            {
+                Subscriptions = result
+            };
         }
     }
 }

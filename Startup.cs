@@ -85,42 +85,46 @@ namespace NuevaLuz
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services
-                .AddSwagger(); // Check out Configuration/DependenciesConfig.cs/AddSwagger to do actual configuration. See: https://github.com/drwatson1/AspNet-Core-REST-Service/wiki#documenting-api
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Fonoteca API", Version = "v1" });
+            });
 
-            services
-                .AddCors()
-                // Add useful interface for accessing the ActionContext outside a controller.
-                .AddSingleton<IActionContextAccessor, ActionContextAccessor>()
-                // Add useful interface for accessing the HttpContext outside a controller.
-                .AddSingleton<IHttpContextAccessor, HttpContextAccessor>()
-                // Add useful interface for accessing the IUrlHelper outside a controller.
-                .AddScoped<IUrlHelper>(x => x
-                    .GetRequiredService<IUrlHelperFactory>()
-                    .GetUrlHelper(x.GetRequiredService<IActionContextAccessor>().ActionContext))
-                .AddMvcCore(options =>
-                {
-                    options.Filters.Add(new CacheControlFilter());   // Add "Cache-Control" header. See: https://github.com/drwatson1/AspNet-Core-REST-Service/wiki#cache-control
-                    options.Filters.Add(new SecurityFilter(new HttpContextAccessor()));   // Security applied globally to all controllers
-                    options.EnableEndpointRouting = false;
-                })
-                .AddNewtonsoftJson(options =>
-                {
-                    options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
-                    options.SerializerSettings.DefaultValueHandling = DefaultValueHandling.Include;
-                    options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                    options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                    options.SerializerSettings.TypeNameHandling = TypeNameHandling.Auto;
+            services.AddCors();
+
+            // Add useful interface for accessing the ActionContext outside a controller.
+            services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
+
+            // Add useful interface for accessing the HttpContext outside a controller.
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+            // Add useful interface for accessing the IUrlHelper outside a controller.
+            services.AddScoped<IUrlHelper>(x => x
+                .GetRequiredService<IUrlHelperFactory>()
+                .GetUrlHelper(x.GetRequiredService<IActionContextAccessor>().ActionContext));
+
+            services.AddControllers(options =>
+            {
+                options.Filters.Add(new CacheControlFilter());
+                options.Filters.Add(new SecurityFilter(new HttpContextAccessor()));
+                options.EnableEndpointRouting = false; // Disable endpoint routing if using traditional MVC
+            })
+            .AddNewtonsoftJson(options =>
+            {
+                options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
+                options.SerializerSettings.DefaultValueHandling = DefaultValueHandling.Include;
+                options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                options.SerializerSettings.TypeNameHandling = TypeNameHandling.Auto;
 #if DEBUG
-                    options.SerializerSettings.Formatting = Formatting.Indented;
+                options.SerializerSettings.Formatting = Formatting.Indented;
 #else
-                    options.SerializerSettings.Formatting = Formatting.None;
+        options.SerializerSettings.Formatting = Formatting.None;
 #endif
-                })
-                .AddApiExplorer()
-                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
+            });
 
-            // Configure token provider expiry time (1 hour)
+            services.AddEndpointsApiExplorer(); // This replaces AddApiExplorer in .NET 6.0
+
             services.Configure<DataProtectionTokenProviderOptions>(options =>
             {
                 options.TokenLifespan = TimeSpan.FromMinutes(Constants.App.ResetPasswordTokenExpirationInMinutes);
@@ -166,29 +170,54 @@ namespace NuevaLuz
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app /* IHostApplicationLifetime applicationLifetime, IHostingEnvironment env */)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
         {
             var settings = new Settings(Startup.Configuration);
 
             Startup.Application = app;
 
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+            else
+            {
+                app.UseExceptionHandler("/Home/Error");
+                app.UseHsts();
+            }
+
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+
             // Use an exception handler middleware before any other handlers
-            // See: https://github.com/drwatson1/AspNet-Core-REST-Service/wiki#unhandled-exceptions-handling
             app.UseFonotecaExceptionHandler();
 
-            // See: https://github.com/drwatson1/AspNet-Core-REST-Service/wiki#cross-origin-resource-sharing-cors-and-preflight-requests
             app.UseCors(builder => builder
                 .AllowAnyOrigin()
                 .AllowAnyMethod()
                 .AllowAnyHeader());
 
-            app
-                .UseOptionsVerbHandler()    // Options verb handler must be added after CORS. See: https://github.com/drwatson1/AspNet-Core-REST-Service/wiki#cross-origin-resource-sharing-cors-and-preflight-requests
-                .UseSwaggerWithOptions();   // Check out Configuration/MiddlewareConfig.cs/UseSwaggerWithOptions to do actual configuration. See: https://github.com/drwatson1/AspNet-Core-REST-Service/wiki#documenting-api
+            app.UseRouting();
 
-            app.UseMvcWithDefaultRoute();
+            app.UseAuthorization();
 
-            _logger.LogInformation("Server started");
+            // Enable middleware to serve generated Swagger as a JSON endpoint.
+            app.UseSwagger();
+
+            // Enable middleware to serve Swagger-UI (HTML, JS, CSS, etc.),
+            // specifying the Swagger JSON endpoint.
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Fonoteca API V1");
+                c.RoutePrefix = string.Empty; // Set Swagger UI at the app's root
+            });
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
+
+            logger.LogInformation("Server started");
         }
     }
 }

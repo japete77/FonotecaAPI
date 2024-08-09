@@ -2,12 +2,9 @@
 
 namespace NuevaLuz.Fonoteca.Models
 {
-    public class ChangePasswordRequest
+    public class ForgotPasswordRequest
     {
-        [JsonProperty("session")]
-        public string Session { get; set; }
-
-        [JsonProperty("newPassword")]
-        public string NewPassword { get; set; }
+        [JsonProperty("email")]
+        public string Email { get; set; }
     }
 }

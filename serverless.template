@@ -1,17 +1,17 @@
-﻿AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: An AWS Serverless Application that uses the ASP.NET Core framework running
-  in Amazon Lambda.
+Description: An AWS Serverless Application that uses the ASP.NET Core framework running in Amazon Lambda.
+
 Resources:
   AspNetCoreFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: not-required
-      Runtime: provided
+      Runtime: dotnet6
       CodeUri: ""
       MemorySize: 256
       Timeout: 30
-      Role: arn:aws:iam::727245912271:role/FonotecaLambda
+      Role: !GetAtt LambdaExecutionRole.Arn
       Policies:
       - AWSLambdaFullAccess
       Events:
@@ -25,6 +25,38 @@ Resources:
           Properties:
             Path: "/"
             Method: ANY
+
+  AspNetCoreFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AspNetCoreFunction}
+      RetentionInDays: 14
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:*
+                  - s3:*
+                  - sns:*
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
 Outputs:
   ApiURL:
     Description: API endpoint URL for Prod environment

@@ -9,10 +9,19 @@
         string Password { get; }
         string SessionTableName { get; }
         int SessionTTLSeconds { get; }
-        string AWSAccessKey { get; }
-        string AWSSecretKey { get; }
         string AWSBucket { get; }
         int AWSLinkExpireInSecs { get; }
         string TopicArn { get; }
+        public string AwsTopicArn { get ;  }
+        public string AwsTopicName { get; }
+        public string AwsPlatformApplicationArnAndroid { get; }
+        public string AwsPlatformApplicationArnIOS { get; }
+        public string AwsSmtpServer { get; }
+        public int AwsSmtpPort { get; }
+        public string AwsSmtpUser { get; }
+        public string AwsSmtpPassword { get; }
+        public string AwsSmtpFrom { get; }
+        public string AwsSmtpFromName { get; }
+
     }
 }

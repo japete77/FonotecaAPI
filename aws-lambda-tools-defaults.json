@@ -8,11 +8,10 @@
   "profile": "default",
   "region": "eu-west-1",
   "configuration": "Release",
-  "framework": "netcoreapp3.1",
   "template": "serverless.template",
+  "framework": "net6.0",
+  "function-runtime": "dotnet6",
   "function-memory-size": 256,
   "function-timeout": 30,
-  "function-handler": "not_required_for_custom_runtime",
-  "function-name": "FonotecaAPI",
-  "msbuild-parameters": "--self-contained true"
+  "function-handler": "Fonoteca.API::NuevaLuz.LambdaEntryPoint::FunctionHandlerAsync"  
 }

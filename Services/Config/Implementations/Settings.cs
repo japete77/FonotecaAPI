@@ -21,10 +21,19 @@ namespace Config.Implementations
         public string Password { get { return Get("Password"); } }
         public string SessionTableName { get { return Get("SessionTableName"); } }
         public int SessionTTLSeconds { get { return Int32.Parse(Get("SessionTTLSeconds")); } }
-        public string AWSAccessKey { get { return Get("AWS:AccessKey"); } }
-        public string AWSSecretKey { get { return Get("AWS:SecretKey"); } }
         public string AWSBucket { get { return Get("AWS:Bucket"); } }
         public int AWSLinkExpireInSecs { get { return Int32.Parse(Get("AWS:LinkExpireInSecs")); } }
         public string TopicArn { get { return Get("AWS:TopicArn"); } }
+        public string AwsTopicArn { get { return Get("AWS:AwsTopicArn"); } }
+        public string AwsTopicName { get { return Get("AWS:AwsTopicName"); } }
+        public string AwsPlatformApplicationArnAndroid { get { return Get("AWS:AwsPlatformApplicationArnAndroid"); } }
+        public string AwsPlatformApplicationArnIOS { get { return Get("AWS:AwsPlatformApplicationArnIOS"); } }
+        public string AwsSmtpServer { get { return Get("AWS:SmtpServer"); } }
+        public int AwsSmtpPort { get { return Int32.Parse(Get("AWS:SmtpPort")); } }
+        public string AwsSmtpUser { get { return Get("AWS:SmtpUser"); } }
+        public string AwsSmtpPassword { get { return Get("AWS:SmtpPassword"); } }
+        public string AwsSmtpFrom { get { return Get("AWS:SmtpFrom"); } }
+        public string AwsSmtpFromName { get { return Get("AWS:SmtpFromName"); } }
+
     }
 }

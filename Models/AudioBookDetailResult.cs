@@ -9,5 +9,6 @@
         public int LengthHours { get; set; }
         public int LengthMins { get; set; }
         public string Title { get; set; }
+        public string Date { get; set; }
     }
 }
