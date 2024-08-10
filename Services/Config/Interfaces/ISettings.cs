@@ -11,7 +11,6 @@
         int SessionTTLSeconds { get; }
         string AWSBucket { get; }
         int AWSLinkExpireInSecs { get; }
-        string TopicArn { get; }
         public string AwsTopicArn { get ;  }
         public string AwsTopicName { get; }
         public string AwsPlatformApplicationArnAndroid { get; }

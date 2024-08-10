@@ -23,7 +23,6 @@ namespace Config.Implementations
         public int SessionTTLSeconds { get { return Int32.Parse(Get("SessionTTLSeconds")); } }
         public string AWSBucket { get { return Get("AWS:Bucket"); } }
         public int AWSLinkExpireInSecs { get { return Int32.Parse(Get("AWS:LinkExpireInSecs")); } }
-        public string TopicArn { get { return Get("AWS:TopicArn"); } }
         public string AwsTopicArn { get { return Get("AWS:AwsTopicArn"); } }
         public string AwsTopicName { get { return Get("AWS:AwsTopicName"); } }
         public string AwsPlatformApplicationArnAndroid { get { return Get("AWS:AwsPlatformApplicationArnAndroid"); } }

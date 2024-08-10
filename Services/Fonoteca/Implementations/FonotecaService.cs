@@ -718,7 +718,7 @@ connection);
                 code = await GetSubscriptionCode(id_suscripcion);
             }
 
-            var topicArn = $"{_settings.TopicArn}";
+            var topicArn = $"{_settings.AwsTopicArn}";
             if (!string.IsNullOrEmpty(code))
             {
                 topicArn += $"-{code}";
