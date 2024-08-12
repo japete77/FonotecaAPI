@@ -216,16 +216,15 @@ connection);
     connection);                    
 
                     await commandUpdate.ExecuteNonQueryAsync();
-                }
 
-                // Send email with the new password
-                var mimeMessage = new MimeMessage();                
-                mimeMessage.From.Add(new MailboxAddress(_settings.AwsSmtpFromName, _settings.AwsSmtpFrom));
-                mimeMessage.To.Add(new MailboxAddress(email, email));
-                mimeMessage.Subject = "Nueva contraseña de acceso a Fonoteca Nueva Luz";
-                mimeMessage.Body = new TextPart(TextFormat.Plain)
-                {
-                    Text = $@"Estimado usuario de fonoteca, 
+                    // Send email with the new password
+                    var mimeMessage = new MimeMessage();
+                    mimeMessage.From.Add(new MailboxAddress(_settings.AwsSmtpFromName, _settings.AwsSmtpFrom));
+                    mimeMessage.To.Add(new MailboxAddress(email, email));
+                    mimeMessage.Subject = "Nueva contraseña de acceso a Fonoteca Nueva Luz";
+                    mimeMessage.Body = new TextPart(TextFormat.Plain)
+                    {
+                        Text = $@"Estimado usuario de fonoteca, 
 
 Se han generado una nuevas credenciales de acceso
 Usario: {userId}
@@ -236,8 +235,9 @@ En el nuevo inicio de sesión se le pedirá que cambie la contraseña por una de
 Atentamente,
 Nueva Luz.
 "
-                };
-                await SendEmailHelper.SendEmail(_settings, mimeMessage);
+                    };
+                    await SendEmailHelper.SendEmail(_settings, mimeMessage);
+                }
             }
         }
 
