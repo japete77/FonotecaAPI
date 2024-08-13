@@ -113,9 +113,9 @@ namespace NuevaLuz
             {
                 options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
                 options.SerializerSettings.DefaultValueHandling = DefaultValueHandling.Include;
-                options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver { NamingStrategy = null };
                 options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                options.SerializerSettings.TypeNameHandling = TypeNameHandling.Auto;
+                options.SerializerSettings.TypeNameHandling = TypeNameHandling.Auto;                
 #if DEBUG
                 options.SerializerSettings.Formatting = Formatting.Indented;
 #else

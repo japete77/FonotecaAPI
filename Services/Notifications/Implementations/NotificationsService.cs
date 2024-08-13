@@ -70,7 +70,7 @@ namespace NuevaLuz.Fonoteca.Services.Notifications.Implementations
                         _settings.AwsPlatformApplicationArnIOS :
                         _settings.AwsPlatformApplicationArnAndroid;
 
-            if (string.IsNullOrEmpty(notificationsSubscriptions.DeviceToken)) return notificationsSubscriptions;
+            if (string.IsNullOrEmpty(deviceToken)) return notificationsSubscriptions;
 
             if (string.IsNullOrEmpty(notificationsSubscriptions.ApplicationEndPoint) ||
                 notificationsSubscriptions.DeviceToken != deviceToken)
@@ -125,7 +125,6 @@ namespace NuevaLuz.Fonoteca.Services.Notifications.Implementations
             {
                 if (!notificationsSubscriptions.Subscriptions.ContainsKey(code))
                 {
-
                     var topicArn = _settings.AwsTopicArn;
                     topicArn += string.IsNullOrEmpty(code) ? "" : $"-{code}";
 

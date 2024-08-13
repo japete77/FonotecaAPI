@@ -19,6 +19,7 @@ namespace Belsize.Controllers
         public FonotecaV1Controller(IFonotecaService fonotecaService, INotificationsService notificationsService)
         {
             _fonotecaService = fonotecaService;
+            _notificationsService = notificationsService;
         }
 
         /// <summary>
