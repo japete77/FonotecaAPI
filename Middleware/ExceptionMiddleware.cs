@@ -105,7 +105,7 @@ namespace NuevaLuz.Fonoteca.Middleware
 
             await context.Response.Body.WriteAsync(exception);
 
-            _logger.LogError(ex, $"Exception Code: {code}, {userMessage}");
+            _logger.LogError(ex, $"Exception Code: {code}, {userMessage}. {ex.Message} {ex.InnerException} {ex.StackTrace}");
         }
 
         private string GetExceptionFieldValue(Exception exception, string propertyName)

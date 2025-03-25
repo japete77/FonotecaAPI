@@ -21,6 +21,14 @@
         public string AwsSmtpPassword { get; }
         public string AwsSmtpFrom { get; }
         public string AwsSmtpFromName { get; }
-
+        public string FirebaseAndroidApiKey { get; }
+        public string FirebaseAndroidApplicationId { get; }
+        public string FirebaseAndroidProjectId { get; }
+        public string FirebaseAndroidStorageBucket { get; }
+        public string FirebaseiOSApiKey { get; }
+        public string FirebaseiOSApplicationId { get; }
+        public string FirebaseiOSProjectId { get; }
+        public string FirebaseiOSStorageBucket { get; }
+        public string FirebaseiOSGcmSenderId { get; }        
     }
 }

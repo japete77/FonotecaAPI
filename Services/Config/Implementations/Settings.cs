@@ -33,6 +33,15 @@ namespace Config.Implementations
         public string AwsSmtpPassword { get { return Get("AWS:SmtpPassword"); } }
         public string AwsSmtpFrom { get { return Get("AWS:SmtpFrom"); } }
         public string AwsSmtpFromName { get { return Get("AWS:SmtpFromName"); } }
+        public string FirebaseAndroidApiKey { get { return Get("Firebase:Android:ApiKey"); } }
+        public string FirebaseAndroidApplicationId { get { return Get("Firebase:Android:ApplicationId"); } }
+        public string FirebaseAndroidProjectId { get { return Get("Firebase:Android:ProjectId"); } }
+        public string FirebaseAndroidStorageBucket { get { return Get("Firebase:Android:StorageBucket"); } }
+        public string FirebaseiOSApiKey { get { return Get("Firebase:iOS:ApiKey"); } }
+        public string FirebaseiOSApplicationId { get { return Get("Firebase:iOS:ApplicationId"); } }
+        public string FirebaseiOSProjectId { get { return Get("Firebase:iOS:ProjectId"); } }
+        public string FirebaseiOSStorageBucket { get { return Get("Firebase:iOS:StorageBucket"); } }
+        public string FirebaseiOSGcmSenderId { get { return Get("Firebase:iOS:GcmSenderId"); } }
 
     }
 }

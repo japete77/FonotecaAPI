@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Config.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using NuevaLuz.Fonoteca.Models;
 using NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces;
 using NuevaLuz.Fonoteca.Services.Notifications.Interfaces;
@@ -15,11 +16,13 @@ namespace Belsize.Controllers
     {
         INotificationsService _notificationsService { get; }
         IFonotecaService _fonotecaService { get; }
+        ISettings _settings;
 
-        public FonotecaV1Controller(IFonotecaService fonotecaService, INotificationsService notificationsService)
+        public FonotecaV1Controller(IFonotecaService fonotecaService, INotificationsService notificationsService, ISettings settings)
         {
             _fonotecaService = fonotecaService;
             _notificationsService = notificationsService;
+            _settings = settings;
         }
 
         /// <summary>
@@ -136,7 +139,7 @@ namespace Belsize.Controllers
         [HttpPost]
         public async Task PublishMessage(PublishMessageRequest request)
         {
-            await _fonotecaService.CheckNotificationsAccess(request.User, request.Password);
+            // await _fonotecaService.CheckNotificationsAccess(request.User, request.Password);
 
             await _fonotecaService.SendMessage(request.Notification, request.Title, request.Message, request.SubscriptionId, request.MaterialId);
         }
@@ -170,7 +173,6 @@ namespace Belsize.Controllers
 
             await _fonotecaService.IncreaseSuscriptionTitleDownloadCounter(session, id, app);
         }
-
 
         [Route("subscription/title/{id}/link")]
         [HttpGet]
@@ -216,6 +218,33 @@ namespace Belsize.Controllers
             return new SynchNotificactionsResponse
             {
                 Subscriptions = result
+            };
+        }
+
+        [Route("firebase/android")]
+        [HttpGet]
+        public FirebaseAndroidConfigResponse GetFirebaseAndroidConfig()
+        {
+            return new FirebaseAndroidConfigResponse
+            {
+                ApiKey = _settings.FirebaseAndroidApiKey,
+                ApplicationId = _settings.FirebaseAndroidApplicationId,
+                ProjectId = _settings.FirebaseAndroidProjectId,
+                StorageBucket = _settings.FirebaseAndroidStorageBucket
+            };
+        }
+
+        [Route("firebase/ios")]
+        [HttpGet]
+        public FirebaseiOSConfigResponse GetFirebaseiOSConfig()
+        {
+            return new FirebaseiOSConfigResponse
+            {
+                ApiKey = _settings.FirebaseiOSApiKey,
+                ApplicationId = _settings.FirebaseiOSApplicationId,
+                ProjectId = _settings.FirebaseiOSProjectId,
+                StorageBucket = _settings.FirebaseiOSStorageBucket,
+                GcmSenderId = _settings.FirebaseiOSGcmSenderId
             };
         }
     }

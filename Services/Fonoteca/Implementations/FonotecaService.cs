@@ -226,8 +226,8 @@ connection);
                     {
                         Text = $@"Estimado usuario de fonoteca, 
 
-Se han generado una nuevas credenciales de acceso
-Usario: {userId}
+Se han generado unas nuevas credenciales de acceso
+Usuario: {userId}
 Contraseña: {cleanPassword}
 
 En el nuevo inicio de sesión se le pedirá que cambie la contraseña por una de su elección.

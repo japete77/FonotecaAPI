@@ -1,7 +1,9 @@
-﻿using Amazon.Runtime;
+﻿using Amazon.Runtime.Internal.Util;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Config.Interfaces;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Web.CodeGeneration;
 using NuevaLuz.Fonoteca.Models;
 using NuevaLuz.Fonoteca.Services.Fonoteca.Interfaces;
 using NuevaLuz.Fonoteca.Services.Notifications.Interfaces;
@@ -19,12 +21,14 @@ namespace NuevaLuz.Fonoteca.Services.Notifications.Implementations
         private List<Topic> _topics;
         private ISettings _settings { get; }
         private IFonotecaService _fonotecaService { get; }
+        private ILogger<NotificationsService> _logger { get; }
 
-        public NotificationsService(ISettings settings, IFonotecaService fonotecaService)
+        public NotificationsService(ISettings settings, IFonotecaService fonotecaService, ILogger<NotificationsService> logger)
         {
             _settings = settings;
             _fonotecaService = fonotecaService;
             _client = new AmazonSimpleNotificationServiceClient();
+            _logger = logger;
         }
 
         public async Task<string> CreateEndpoint(string deviceToken, string platform)
@@ -45,7 +49,7 @@ namespace NuevaLuz.Fonoteca.Services.Notifications.Implementations
             }
             else
             {
-                Console.WriteLine("Error creando endpoint: " + endPointResponse.HttpStatusCode);
+                _logger.LogDebug("Error creando endpoint: " + endPointResponse.HttpStatusCode);
                 return "";
             }
         }
@@ -58,7 +62,7 @@ namespace NuevaLuz.Fonoteca.Services.Notifications.Implementations
 
                 if (response.HttpStatusCode != HttpStatusCode.OK)
                 {
-                    Console.WriteLine($"Error eliminando endpoint: {response.HttpStatusCode}");
+                    _logger.LogDebug($"Error eliminando endpoint: {response.HttpStatusCode}");
                 }
             }
             catch { /*Silent error in case endpoint doesn´t exist */ }
@@ -98,6 +102,8 @@ namespace NuevaLuz.Fonoteca.Services.Notifications.Implementations
 
                     notificationsSubscriptions.Subscriptions.Clear();
                 }
+
+                _logger.LogError("Device token: " + deviceToken);
 
                 // register with SNS to create a new endpoint
                 var endPointResponse = await _client.CreatePlatformEndpointAsync(
